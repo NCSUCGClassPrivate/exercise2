@@ -157,38 +157,48 @@ function main() {
     var h = context.canvas.height;  // as set in html
     var imagedata = context.createImageData(w,h);
  
-    // Define a rectangle in 2D with colors and coords at corners
-    var ulc = new Color(255,0,0,255); // upper left corner color: red
-    var urc = new Color(0,255,0,255); // upper right corner color: green
-    var llc = new Color(0,0,255,255); // lower left corner color: blue
-    var lrc = new Color(0,0,0,255); // lower right corner color: black
-    var ulx = 50, uly = 50; // upper left corner position
-    var urx = 200, ury = 50; // upper right corner position
-    var llx = 50, lly = 150; // lower left corner position
-    var lrx = 200, lry = 150; // lower right corner position
+    // Define a triangle in 2D with colors and coords at corners
+    // (cyan, magenta, yellow — pink was the 4th color for a rectangle)
+    var tc = new Color(0,255,255,255); // top corner color: cyan
+    var blc = new Color(255,0,255,255); // bottom left corner color: magenta
+    var brc = new Color(255,255,0,255); // bottom right corner color: yellow
+    var tx = 125, ty = 50; // top corner position
+    var blx = 50, bly = 150; // bottom left corner position
+    var brx = 200, bry = 150; // bottom right corner position
     
-    // set up the vertical interpolation
-    var lc = ulc.clone();  // left color
-    var rc = urc.clone();  // right color
-    var vDelta = 1 / (lly-uly); // norm'd vertical delta
-    var lcDelta = llc.clone().subtract(ulc).scale(vDelta); // left vert color delta
-    var rcDelta = lrc.clone().subtract(urc).scale(vDelta); // right vert color delta
+    // set up the vertical interpolation (left and right edges from tip to base)
+    var lc = tc.clone();  // left color
+    var rc = tc.clone();  // right color
+    var lx = tx, rx = tx; // left and right edge x
+    var vDelta = 1 / (bly-ty); // norm'd vertical delta
+    var lcDelta = blc.clone().subtract(tc).scale(vDelta); // left vert color delta
+    var rcDelta = brc.clone().subtract(tc).scale(vDelta); // right vert color delta
+    var lxDelta = (blx-tx) * vDelta; // left edge x delta
+    var rxDelta = (brx-tx) * vDelta; // right edge x delta
     
     // set up the horizontal interpolation
     var hc = new Color(); // horizontal color
-    var hDelta = 1 / (urx-ulx); // norm'd horizontal delta
     var hcDelta = new Color(); // horizontal color delta
     
     // do the interpolation
-    for (var y=uly; y<=lly; y++) {
+    for (var y=ty; y<=bly; y++) {
+        var leftX = Math.round(lx);
+        var rightX = Math.round(rx);
+        var hSpan = rightX - leftX;
         hc.copy(lc); // begin with the left color
-        hcDelta.copy(rc).subtract(lc).scale(hDelta); // reset horiz color delta
-        for (var x=ulx; x<=urx; x++) {
-            drawPixel(imagedata,x,y,hc);
-            hc.add(hcDelta);
-        } // end horizontal
+        if (hSpan > 0) {
+            hcDelta.copy(rc).subtract(lc).scale(1 / hSpan); // reset horiz color delta
+            for (var x=leftX; x<=rightX; x++) {
+                drawPixel(imagedata,x,y,hc);
+                hc.add(hcDelta);
+            } // end horizontal
+        } else {
+            drawPixel(imagedata,leftX,y,hc); // single pixel at the tip
+        }
         lc.add(lcDelta);
         rc.add(rcDelta);
+        lx += lxDelta;
+        rx += rxDelta;
     } // end vertical
     
     context.putImageData(imagedata, 0, 0); // display the image in the context
